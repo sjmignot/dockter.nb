@@ -9,46 +9,70 @@ IMAGE_MAP = {
     'tf': 'jupyter/tensorfolow-notebook'
 }
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-a',
-                    '--author',
-                    default=getpass.getuser(),
-                    help='creater of jupyter notebook')
 
-parser.add_argument('-i',
-                    '--base-image',
-                    choices=('base', 'scipy', 'tf'),
-                    default='base',
-                    help='notebook uses scipy functionality')
+def get_user_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-a',
+                        '--author',
+                        default=getpass.getuser(),
+                        help='creater of jupyter notebook')
 
-parser.add_argument('-b',
-                    '--build',
-                    action='store_true',
-                    help='build docker image')
+    parser.add_argument('-i',
+                        '--base-image',
+                        choices=('base', 'scipy', 'tf'),
+                        default='base',
+                        help='notebook uses scipy functionality')
 
-parser.add_argument('-r',
-                    '--run',
-                    action='store_true',
-                    help='run jupyter while mapping current working directory')
+    parser.add_argument('-b',
+                        '--build',
+                        action='store_true',
+                        help='build docker image')
 
-args = parser.parse_args()
-print(args)
+    parser.add_argument(
+        '-r',
+        '--run',
+        action='store_true',
+        help='run jupyter while mapping current working directory')
 
-image = IMAGE_MAP[args.base_image]
+    return parser.parse_args()
 
-installed_packages = [
-    f"{d.project_name}=={d.version}" for d in pkg_resources.working_set
-]
 
-with open('Dockerfile', 'w+') as f:
-    f.write(f'FROM {image}\n'
-            f'LABEL author="{args.author}"\n'
-            f'USER root\n'
-            f'RUN pip install {" ".join(installed_packages)}\n'
-            f'USER $NB_UID\n')
+def write_dockerfile(image, author, installed_packages):
+    with open('Dockerfile', 'w+') as f:
+        f.write(f'FROM {image}\n'
+                f'LABEL author="{args.author}"\n'
+                f'USER root\n'
+                f'RUN pip install {" ".join(installed_packages)}\n'
+                f'USER $NB_UID\n')
 
-if args.build:
-    os.system('docker build .')
 
-if args.run:
-    os.system('docker run -p 8888:8888 -v $(pwd):/home/jovyan/work')
+def process_user_args(args):
+    image = IMAGE_MAP[args.base_image]
+    author = args.author
+
+    installed_packages = [
+        f"{d.project_name}=={d.version}" for d in pkg_resources.working_set
+    ]
+
+    return image, author, installed_packages
+
+
+def build_notebook_image():
+    os.system(f'docker build -t docktered-nb .')
+
+
+def run_notebook():
+    os.system(
+        f'docker run -p 8888:8888 -v $(pwd):/home/jovyan/work docktered-nb')
+
+
+if __name__ == '__main__':
+    args = get_user_args()
+    image, author, installed_packages = process_user_args(args)
+    write_dockerfile(image, author, installed_packages)
+
+    if args.build:
+        build_notebook_image()
+
+    if args.run:
+        run_notebook()
