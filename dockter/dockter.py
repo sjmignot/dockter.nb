@@ -1,6 +1,7 @@
 import getpass
 import argparse
 import os
+import pkgutil
 import pkg_resources
 
 IMAGE_MAP = {
@@ -34,13 +35,18 @@ def get_user_args():
         action='store_true',
         help='run jupyter while mapping current working directory')
 
+    parser.add_argument('-c',
+                        '--compose',
+                        action='store_true',
+                        help='generate docker compose file')
+
     return parser.parse_args()
 
 
 def write_dockerfile(image, author, installed_packages):
     with open('Dockerfile', 'w+') as f:
         f.write(f'FROM {image}\n'
-                f'LABEL author="{args.author}"\n'
+                f'LABEL author="{author}"\n'
                 f'USER root\n'
                 f'RUN pip install {" ".join(installed_packages)}\n'
                 f'USER $NB_UID\n')
@@ -50,25 +56,26 @@ def process_user_args(args):
     image = IMAGE_MAP[args.base_image]
     author = args.author
 
-    installed_packages = [
-        f"{d.project_name}=={d.version}" for d in pkg_resources.working_set
-    ]
+    installed_packages = os.popen(
+        "pipdeptree  | grep -v '^\s*-'").read().split()
+    print(installed_packages)
 
     return image, author, installed_packages
 
 
 def build_notebook_image():
-    os.system(f'docker build -t docktered-nb .')
+    os.system('docker build -t docktered-nb .')
 
 
 def run_notebook():
     os.system(
-        f'docker run -p 8888:8888 -v $(pwd):/home/jovyan/work docktered-nb')
+        'docker run -p 8888:8888 -v $(pwd):/home/jovyan/work docktered-nb')
 
 
-if __name__ == '__main__':
+def main():
     args = get_user_args()
     image, author, installed_packages = process_user_args(args)
+    print
     write_dockerfile(image, author, installed_packages)
 
     if args.build:
@@ -76,3 +83,7 @@ if __name__ == '__main__':
 
     if args.run:
         run_notebook()
+
+
+if __name__ == '__main__':
+    main()
