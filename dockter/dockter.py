@@ -58,7 +58,6 @@ def process_user_args(args):
 
     installed_packages = os.popen(
         "pipdeptree  | grep -v '^\s*-'").read().split()
-    print(installed_packages)
 
     return image, author, installed_packages
 
@@ -75,7 +74,6 @@ def run_notebook():
 def main():
     args = get_user_args()
     image, author, installed_packages = process_user_args(args)
-    print
     write_dockerfile(image, author, installed_packages)
 
     if args.build:
