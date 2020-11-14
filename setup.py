@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="dockter",  # Replace with your own username
-    version="0.1.6",
+    version="0.1.8",
     author="Samuel Mignot",
     description=
     "A package to create dockerfiles for jupyter notebooks to ensure compatibility",
